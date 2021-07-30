@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
  * output  :  {sweep}\t{channel}\t{time}
  */
 
+ // mcs1 #{input file}
 fn main() -> std::io::Result<()> {
     let path = env::current_dir()?;
-    println!("starting dir: {}", path.display());
     let args: Vec<String> = env::args().collect();
     let read_path = Path::new(&args[1]);
     let f = match File::open(read_path) {
@@ -103,7 +103,7 @@ fn main() -> std::io::Result<()> {
         // 通常, 100 - 100 or 100 - 101 で、0以下の自然数になるはず. オーバーフローであれば、FFFF - 0 = 65535 - 0 = 65535 となるはずなので、
         // delta < 65535 は書き込み順序がおかしい．
         if 0 < delta && delta < 65535 {
-            panic!("ひっくり返ってる at {} {} {}", line_str, sweeps_raw, delta)
+            panic!("{}\nひっくり返ってる at {} {} {}", read_path, line_str, sweeps_raw, delta)
         }
         // 通常, 100 - 100 or 100 - 101 で、0以下の自然数になるはずだが、ひっくり返っていたらオーバーフローと判断
         if delta == 65535 {
