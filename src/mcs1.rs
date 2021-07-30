@@ -12,9 +12,9 @@ use std::path::{Path, PathBuf};
 
  // mcs1 #{input file}
 fn main() -> std::io::Result<()> {
-    let path = env::current_dir()?;
     let args: Vec<String> = env::args().collect();
     let read_path = Path::new(&args[1]);
+    println!("{}", read_path.display());
     let f = match File::open(read_path) {
         Err(why) => panic!("couldn't open: {}", why.to_string()),
         Ok(file) => file,
@@ -103,7 +103,7 @@ fn main() -> std::io::Result<()> {
         // 通常, 100 - 100 or 100 - 101 で、0以下の自然数になるはず. オーバーフローであれば、FFFF - 0 = 65535 - 0 = 65535 となるはずなので、
         // delta < 65535 は書き込み順序がおかしい．
         if 0 < delta && delta < 65535 {
-            panic!("{}\nひっくり返ってる at {} {} {}", &args[1], line_str, sweeps_raw, delta)
+            panic!("ひっくり返ってる at {} {} {} {} {} ", line_str, sweeps_raw, before_raw, delta, before)
         }
         // 通常, 100 - 100 or 100 - 101 で、0以下の自然数になるはずだが、ひっくり返っていたらオーバーフローと判断
         if delta == 65535 {
