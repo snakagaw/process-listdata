@@ -63,10 +63,10 @@ fn main() -> std::io::Result<()> {
         .unwrap();
     let mut writer = BufWriter::new(w);
 
-    let mut add_loop: i64 = 0;
+    let mut add_loop: i64 = 0; // オーバーフロー補正
     let mut last_add_loop = 0;
     let mut before_raw: i64 = 0; // before : オーバーフロー補正なし
-    let mut before: i64 = 0; // before : オーバーフロー補正なし
+    let mut before: i64 = 0; // before : オーバーフロー補正あり
     for line_ in reader.lines() {
         let line_str = &line_.unwrap();
         let mut line = i64::from_str_radix(line_str, 16).unwrap();
@@ -96,9 +96,17 @@ fn main() -> std::io::Result<()> {
 
         let delta = before_raw - sweeps_raw; //
 
+        if before == 0 && sweeps_raw != 0 {
+            panic!("スタートが0ではない")
+        }
+
         // 差が2以上の場合
         if delta < -1 {
             panic!("データが飛んでる at {} {} {}", line_str, sweeps_raw, delta)
+        }
+
+        if 0 < delta && delta < 65535 && sweeps_raw == 0 {
+            print!("途中ストップを検知")
         }
         // 通常, 100 - 100 or 100 - 101 で、0以下の自然数になるはず. オーバーフローであれば、FFFF - 0 = 65535 - 0 = 65535 となるはずなので、
         // delta < 65535 は書き込み順序がおかしい．
