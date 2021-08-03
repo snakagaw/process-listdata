@@ -96,7 +96,7 @@ fn main() -> std::io::Result<()> {
 
         let delta = before_raw - sweeps_raw; //
 
-        if before == 0 && sweeps_raw != 0 {
+        if before == 0 && sweeps_raw != 0 && delta < -1{
             panic!("スタートが0ではない")
         }
 
