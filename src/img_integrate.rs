@@ -37,58 +37,58 @@ fn main() -> std::io::Result<()> {
 }
 
 // 1ファイルごとの処理
-fn process_file(path: String) -> std::io::Result<()> {
+fn process_file(path: String) -> Vec<PointPair> {
     let mut points: Vec<PointPair> = Vec::new();
-    println!("{}", path);
-    let mut reader = csv::ReaderBuilder::new()
+    
+    let reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b'\t')
         .flexible(true)
-        .from_path(Path::new(&path))?;
+        .from_path(Path::new(&path));
 
     let mut buffer: Vec<Record> = Vec::new();
 
-    for line in reader.deserialize() {
-        match line {
-            Err(_) => {
-                panic!("行の処理でエラー")
-            }
-            Ok(line) => {
-                let record: Record = line;
-                if buffer.len() == 0 || record.0 == buffer[0].0 {
-                    buffer.push(record);
-                    continue;
-                }
+    match reader {
+        Err(err) => {panic!("reader 作成でエラー {}", err)}
+        Ok(reader_) => {
+            let mut reader = reader_;
+            for line in reader.deserialize() {
+                match line {
+                    Err(_) => {
+                        panic!("行の処理でエラー")
+                    }
+                    Ok(line) => {
+                        let record: Record = line;
+                        if buffer.len() == 0 || record.0 == buffer[0].0 {
+                            buffer.push(record);
+                            continue;
+                        }
+                        // record のid が、buffer にたまっていたものと違った場合
 
-                // record のid が、buffer にたまっていたものと違った場合
-                if buffer.len() == 2 {
-                    points.push(PointPair {
-                        id: buffer[0].0 as u128,
-                        p1: Point {
-                            x: buffer[0].1,
-                            y: buffer[0].2,
-                        },
-                        p2: Point {
-                            x: buffer[1].1,
-                            y: buffer[1].2,
-                        },
-                        theta: -1.0,
-                        electron: 0,
-                    });
+                        if buffer.len() == 2 {
+                            points.push(PointPair {
+                                id: buffer[0].0 as u128,
+                                p1: Point {
+                                    x: buffer[0].1,
+                                    y: buffer[0].2,
+                                },
+                                p2: Point {
+                                    x: buffer[1].1,
+                                    y: buffer[1].2,
+                                },
+                                theta: -1.0,
+                                electron: 0,
+                            });
+                        }
+                        buffer.clear();
+                        buffer.push(record);      
+                    }
                 }
-                buffer.clear();
-                buffer.push(record);
-
-                
             }
+            // for point in &points {
+            //     println!("{}", point.id);
+            // }
+            points
         }
     }
-    println!("{}", points.len());
-    for point in points {
-        println!(
-            "{} {} {} {} {}",
-            point.id, point.p1.x, point.p1.y, point.p2.x, point.p2.y
-        );
-    }
-    Ok(())
 }
