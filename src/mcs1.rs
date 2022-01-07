@@ -74,11 +74,8 @@ fn main() -> std::io::Result<()> {
         let channel = line & 7;
         line = line >> 3;
 
-        let edge = line & 1; // 0:up, 1:down
+        let _edge = line & 1; // 0:up, 1:down
         line = line >> 1;
-        if edge == 0 {
-            panic!("立ち上がりが検出されています at {} {}", line_str, before)
-        }
 
         let time = line & 268_435_455;
         line = line >> 28;
