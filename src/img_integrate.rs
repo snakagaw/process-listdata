@@ -20,30 +20,30 @@ type McsRecord= (u128, u8, u16);
  * output  :  二次元map
  */
 fn main() -> std::io::Result<()> {
-    let mut args: Vec<String> = env::args().collect();
-    args.remove(0);
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        panic!("引数の数が異なります");
+    }
 
-    println!("{} 個のフィアルを読み取ります", args.len());
-    for path in args {
-        let write_path = cop2molaxis(&path);
-        let w = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(write_path)
-            .unwrap();
-        let mut writer = BufWriter::new(w);
+    let path = &args[1];
+    let write_path = cop2molaxis(&path);
+    let w = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(write_path)
+        .unwrap();
+    let mut writer = BufWriter::new(w);
 
-        let points = extract_pair_points(path);
+    let points = extract_pair_points(&path);
 
-        for point in &points {
-            write!(writer, "{:05}\t{}\t{}\n", point.id, point.theta, point.electron).expect("書き込みエラーです");
-        }
+    for point in &points {
+        write!(writer, "{:05}\t{}\t{}\n", point.id, point.theta, point.electron).expect("書き込みエラーです");
     }
     Ok(())
 }
 
 // 1ファイルごとの処理
-fn extract_pair_points(path: String) -> Vec<PointPair> {
+fn extract_pair_points(path: &String) -> Vec<PointPair> {
     let mut points: Vec<PointPair> = Vec::new();
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
