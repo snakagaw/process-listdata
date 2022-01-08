@@ -1,11 +1,14 @@
 use std::env;
-use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::io::Write;
+use std::path::Path;
 
 mod point_pair;
 use point_pair::PointPair;
+
+mod file_names;
+use file_names::{cop2mcs, cop2molaxis};
 
 type Record = (u64, u16, u16, u8);
 
@@ -19,15 +22,7 @@ fn main() -> std::io::Result<()> {
 
     println!("{} 個のフィアルを読み取ります", args.len());
     for path in args {
-        let mut write_path = PathBuf::from(&path);
-        
-        
-        let filename = String::from(write_path.file_name().unwrap().to_str().unwrap());
-        write_path.pop(); write_path.pop();
-        write_path.push("2_molaxis");
-        write_path.push(filename);
-
-        println!("{:?}", write_path);
+        let write_path = cop2molaxis(&path);
         let w = OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -47,53 +42,38 @@ fn main() -> std::io::Result<()> {
 // 1ファイルごとの処理
 fn extract_pair_points(path: String) -> Vec<PointPair> {
     let mut points: Vec<PointPair> = Vec::new();
-    let reader = csv::ReaderBuilder::new()
+    let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b'\t')
         .flexible(true)
-        .from_path(Path::new(&path));
+        .from_path(Path::new(&path))
+        .unwrap();
 
-    match reader {
-        Err(err) => {
-            panic!("reader 作成でエラー {}", err)
+    let mut buffer: Vec<Record> = Vec::new();
+    for line in reader.deserialize() {
+        let record: Record = line.unwrap();
+        if buffer.len() == 0 || record.0 == buffer[0].0 {
+            buffer.push(record);
+            continue;
         }
-        Ok(reader_) => {
-            let mut buffer: Vec<Record> = Vec::new();
-            let mut reader = reader_;
-            for line in reader.deserialize() {
-                match line {
-                    Err(_) => {
-                        panic!("行の処理でエラー")
-                    }
-                    Ok(line) => {
-                        let record: Record = line;
-                        if buffer.len() == 0 || record.0 == buffer[0].0 {
-                            buffer.push(record);
-                            continue;
-                        }
-                        // record のid が、buffer にたまっていたものと違った場合
+        // record のid が、buffer にたまっていたものと違った場合
 
-                        if buffer.len() == 2 {
-                            let pair = PointPair::new(
-                                buffer[0].0 as u128,
-                                buffer[0].1 as i16, buffer[0].2 as i16,
-                                buffer[1].1 as i16, buffer[1].2 as i16
-                            );
-                            if pair.valid() {
-                                points.push(pair);
-                            }
-                        }
-                        buffer.clear();
-                        buffer.push(record);
-                    }
-                }
+        if buffer.len() == 2 {
+            // PoitPair 構造体を生成すると同時に、電荷、分子軸配向を計算
+            let mut pair = PointPair::new(
+                buffer[0].0 as u128,
+                buffer[0].1 as i16,
+                buffer[0].2 as i16,
+                buffer[1].1 as i16,
+                buffer[1].2 as i16,
+            );
+            pair.electron = 3;
+            if pair.valid() {
+                points.push(pair);
             }
-            // for point in &points {
-            //     println!("{} {} {} {}", point.id, point.p1, point.p2, point.theta);
-            // }
-            points
         }
+        buffer.clear();
+        buffer.push(record);
     }
+    points
 }
-
-
