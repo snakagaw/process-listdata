@@ -1,8 +1,10 @@
 use std::env;
-use std::fs::OpenOptions;
+use std::fs::{OpenOptions, File};
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::Path;
+
+use csv::DeserializeRecordsIter;
 
 mod point_pair;
 use point_pair::PointPair;
@@ -10,7 +12,8 @@ use point_pair::PointPair;
 mod file_names;
 use file_names::{cop2mcs, cop2molaxis};
 
-type Record = (u64, u16, u16, u8);
+type Record = (u128, u16, u16, u8);
+type McsRecord= (u128, u8, u16);
 
 /**
  * input   :  {sweep}\t{x}\t{y}\t{brightness}の配列
@@ -33,7 +36,7 @@ fn main() -> std::io::Result<()> {
         let points = extract_pair_points(path);
 
         for point in &points {
-            write!(writer, "{}\t{}\n", point.id, point.theta).expect("書き込みエラーです");
+            write!(writer, "{:05}\t{}\t{}\n", point.id, point.theta, point.electron).expect("書き込みエラーです");
         }
     }
     Ok(())
@@ -48,6 +51,15 @@ fn extract_pair_points(path: String) -> Vec<PointPair> {
         .flexible(true)
         .from_path(Path::new(&path))
         .unwrap();
+
+    let mut mcs_reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .delimiter(b'\t')
+        .flexible(true)
+        .from_path(cop2mcs(&path))
+        .unwrap();
+    
+    let mut mcs_itr: DeserializeRecordsIter<'_, File, McsRecord> = mcs_reader.deserialize();
 
     let mut buffer: Vec<Record> = Vec::new();
     for line in reader.deserialize() {
@@ -67,7 +79,21 @@ fn extract_pair_points(path: String) -> Vec<PointPair> {
                 buffer[1].1 as i16,
                 buffer[1].2 as i16,
             );
-            pair.electron = 3;
+
+            // 電子の数を数える
+            loop {
+                let mcs_record = mcs_itr.next().unwrap().unwrap();
+
+                // id がmcs のid と一致しており、かつmcs がSTOP の場合
+                if mcs_record.0 == pair.id && mcs_record.1 == 1 {
+                    pair.electron += 1;
+                }
+
+                // mcs のid の方が大きい場合、次の入射粒子に備えて終了
+                if mcs_record.0 > pair.id {
+                    break;
+                }
+            }
             if pair.valid() {
                 points.push(pair);
             }
