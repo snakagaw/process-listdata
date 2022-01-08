@@ -3,7 +3,9 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
-use std::path::{Path, PathBuf};
+use std::path::{Path};
+
+mod mylib;
 
 /**
  * input   :  hex
@@ -54,8 +56,7 @@ fn main() -> std::io::Result<()> {
             }
         }
     }
-    let mut write_path = PathBuf::from(read_path);
-    write_path.set_extension("lstdecoded");
+    let write_path = mylib::file_names::lst2lstdecoded(&args[1]);
     let w = OpenOptions::new()
         .write(true)
         .create_new(true)
